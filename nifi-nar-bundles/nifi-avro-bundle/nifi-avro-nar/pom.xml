@@ -29,6 +29,11 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-standard-services-api-nar</artifactId>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-avro-processors</artifactId>
             <version>0.3.1-SNAPSHOT</version>
         </dependency>

@@ -32,8 +32,16 @@
 			<artifactId>nifi-processor-utils</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.apache.nifi</groupId>
+			<artifactId>nifi-distributed-cache-client-service-api</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.apache.avro</groupId>
 			<artifactId>avro</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
