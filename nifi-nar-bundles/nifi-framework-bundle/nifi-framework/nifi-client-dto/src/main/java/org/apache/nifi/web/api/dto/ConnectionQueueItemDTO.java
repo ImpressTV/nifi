@@ -30,6 +30,11 @@ public class ConnectionQueueItemDTO extends NiFiComponentDTO {
     private String flowFileUuid;
     private String fileSize;
     private Long fileSizeBytes;
+    private String fileName;
+    private Long entryDate;
+    private Long lineageStartDate;
+    private String mimeType;
+
     private String contentClaimSection;
     private String contentClaimContainer;
     private String contentClaimIdentifier;
@@ -94,12 +99,52 @@ public class ConnectionQueueItemDTO extends NiFiComponentDTO {
     }
 
     /**
+     * @return MimeType of the FlowFile
+     */
+    @ApiModelProperty(
+            value = "The Mime Type of the flowfile."
+    )
+    public String getMimeType() { return mimeType; }
+
+    public void setMimeType(String mimeType) { this.mimeType = mimeType; }
+
+    /**
+     * @return Lineage start date of the FlowFile
+     */
+    @ApiModelProperty(
+            value = "The lineage start date of the flowfile."
+    )
+    public long getLineageStartDate() { return lineageStartDate; }
+
+    public void setLineageStartDate(long lineageStartDate) { this.lineageStartDate = lineageStartDate; }
+
+    /**
+     * @return Entry date of the FlowFile
+     */
+    @ApiModelProperty(
+            value = "The entry date of the flowfile."
+    )
+    public long getEntryDate() { return entryDate; }
+
+    public void setEntryDate(long entryDate) { this.entryDate = entryDate; }
+
+    /**
+     * @return filename of the FlowFile
+     */
+    @ApiModelProperty(
+            value = "The filename of the flowfile."
+    )
+    public String getFileName() { return fileName; }
+
+    public void setFileName(String fileName) { this.fileName = fileName; }
+
+    /**
      * @return the Section in which the Content Claim lives, or <code>null</code> if no Content Claim exists
      */
     @ApiModelProperty(
             value = "The section in which the content claim lives."
     )
-    public String getcontentClaimSection() {
+    public String getContentClaimSection() {
         return contentClaimSection;
     }
 
@@ -113,7 +158,7 @@ public class ConnectionQueueItemDTO extends NiFiComponentDTO {
     @ApiModelProperty(
             value = "The container in which the claim lives."
     )
-    public String getcontentClaimContainer() {
+    public String getContentClaimContainer() {
         return contentClaimContainer;
     }
 
@@ -127,7 +172,7 @@ public class ConnectionQueueItemDTO extends NiFiComponentDTO {
     @ApiModelProperty(
             value = "The identifier of the content claim."
     )
-    public String getcontentClaimIdentifier() {
+    public String getContentClaimIdentifier() {
         return contentClaimIdentifier;
     }
 
@@ -141,7 +186,7 @@ public class ConnectionQueueItemDTO extends NiFiComponentDTO {
     @ApiModelProperty(
             value = "The offset into the content claim where the flowfiles content begins."
     )
-    public Long getcontentClaimOffset() {
+    public Long getContentClaimOffset() {
         return contentClaimOffset;
     }
 

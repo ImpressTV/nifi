@@ -320,6 +320,10 @@ public final class DtoFactory {
         dto.setContentClaimOffset(claim.getOffset());
 
         dto.setFileSize(FormatUtils.formatDataSize(flowFileRecord.getSize()));
+        dto.setFileName(flowFileRecord.getAttribute(CoreAttributes.FILENAME.key()));
+        dto.setMimeType(flowFileRecord.getAttribute(CoreAttributes.MIME_TYPE.key()));
+        dto.setEntryDate(flowFileRecord.getEntryDate());
+        dto.setLineageStartDate(flowFileRecord.getLineageStartDate());
         dto.setFileSizeBytes(flowFileRecord.getSize());
         dto.setFlowFileUuid(flowFileRecord.getAttribute(CoreAttributes.UUID.key()));
         dto.setPriority(priority);
