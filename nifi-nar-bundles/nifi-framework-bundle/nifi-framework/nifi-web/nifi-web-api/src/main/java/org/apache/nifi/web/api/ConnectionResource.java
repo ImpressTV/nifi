@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.web.api;
 
+import com.sun.jersey.api.core.ResourceContext;
 import com.wordnik.swagger.annotations.Api;
 import com.wordnik.swagger.annotations.ApiOperation;
 import com.wordnik.swagger.annotations.ApiParam;
@@ -87,6 +88,33 @@ public class ConnectionResource extends ApplicationResource {
     private WebClusterManager clusterManager;
     private NiFiProperties properties;
     private String groupId;
+
+    @Context
+    private ResourceContext resourceContext;
+
+    /**
+     * Get the connection queue sub-resource.
+     *
+     * @return the connection queue sub-resource
+     */
+    @Path("/{connection-id}/queue")
+    @ApiOperation(
+            value = "Gets the connection queue resource",
+            response = ConnectionQueueResource.class
+    )
+    public ConnectionQueueResource getConnectionQueueResource(
+            @ApiParam(
+                    value = "The id of the connection that is the parent of the requested resource(s).",
+                    required = true
+            )
+            @PathParam("connection-id") String connectionId
+    ) {
+        ConnectionQueueResource connectionQueueResource = resourceContext.getResource(ConnectionQueueResource.class);
+        connectionQueueResource.setGroupId(groupId);
+        connectionQueueResource.setConnectionId(connectionId);
+
+        return connectionQueueResource;
+    }
 
     /**
      * Populate the uri's for the specified processors and their relationships.

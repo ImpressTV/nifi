@@ -101,6 +101,21 @@ public interface FlowFileQueue {
     QueueSize getActiveQueueSize();
 
     /**
+     * Removes all of the items from this queue.
+     *
+     */
+    void clear();
+
+    /**
+     * Removes a single item from this queue, if it is present. Returns true if and only if this
+     * queue contained the specified item.
+     *
+     * @param record Item to be removed
+     * @reutrn true if this queue changed as a result of the call
+     */
+    boolean remove(FlowFileRecord record);
+
+    /**
      * Returns a QueueSize that represents all FlowFiles that are 'unacknowledged'. A FlowFile
      * is considered to be unacknowledged if it has been pulled from the queue by some component
      * but the session that pulled the FlowFile has not yet been committed or rolled back.
@@ -199,5 +214,12 @@ public interface FlowFileQueue {
     int getFlowFileExpiration(TimeUnit timeUnit);
 
     void setFlowFileExpiration(String flowExpirationPeriod);
+
+    /**
+     * Returns an ordered list of all the items in this queue.
+     *
+     * @return ordered list of queue items
+     */
+    List<FlowFileRecord> getItems();
 
 }

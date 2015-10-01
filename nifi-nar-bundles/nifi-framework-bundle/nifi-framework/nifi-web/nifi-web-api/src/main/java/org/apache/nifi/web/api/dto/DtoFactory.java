@@ -69,6 +69,10 @@ import org.apache.nifi.controller.ProcessorNode;
 import org.apache.nifi.controller.Snippet;
 import org.apache.nifi.controller.Template;
 import org.apache.nifi.controller.label.Label;
+import org.apache.nifi.controller.repository.FlowFileRecord;
+import org.apache.nifi.controller.repository.claim.ContentClaim;
+import org.apache.nifi.controller.repository.claim.ResourceClaim;
+import org.apache.nifi.controller.repository.claim.StandardContentClaim;
 import org.apache.nifi.controller.status.ConnectionStatus;
 import org.apache.nifi.controller.status.PortStatus;
 import org.apache.nifi.controller.status.ProcessGroupStatus;
@@ -78,6 +82,7 @@ import org.apache.nifi.diagnostics.GarbageCollection;
 import org.apache.nifi.diagnostics.StorageUsage;
 import org.apache.nifi.diagnostics.SystemDiagnostics;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
+import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.groups.ProcessGroupCounts;
 import org.apache.nifi.groups.RemoteProcessGroup;
@@ -291,6 +296,35 @@ public final class DtoFactory {
      */
     public PositionDTO createPositionDto(final Position position) {
         return new PositionDTO(position.getX(), position.getY());
+    }
+
+    /**
+     * Creates a ConnectionQueueItemDTO from the specified flow file and priority value.
+     *
+     * @param flowFileRecord Flow file to be converted
+     * @param priority The priority of the flow file
+     * @return dto
+     */
+    public ConnectionQueueItemDTO createConnectionQueueItemDto(final FlowFileRecord flowFileRecord, Integer priority) {
+        if (flowFileRecord == null) {
+            return null;
+        }
+        final ConnectionQueueItemDTO dto = new ConnectionQueueItemDTO();
+        final ContentClaim claim = flowFileRecord.getContentClaim();
+        final ResourceClaim resourceClaim = claim.getResourceClaim();
+
+        dto.setContentClaimSection(resourceClaim.getSection());
+        dto.setContentClaimContainer(resourceClaim.getContainer());
+        dto.setContentClaimIdentifier(resourceClaim.getId());
+
+        dto.setContentClaimOffset(claim.getOffset());
+
+        dto.setFileSize(FormatUtils.formatDataSize(flowFileRecord.getSize()));
+        dto.setFileSizeBytes(flowFileRecord.getSize());
+        dto.setFlowFileUuid(flowFileRecord.getAttribute(CoreAttributes.UUID.key()));
+        dto.setPriority(priority);
+        dto.setFlowFileId(flowFileRecord.getId());
+        return dto;
     }
 
     /**

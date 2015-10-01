@@ -177,6 +177,11 @@
         <property name="properties" ref="nifiProperties"/>
         <property name="clusterManager" ref="clusterManager"/>
     </bean>
+    <bean id="connectionQueueResource" class="org.apache.nifi.web.api.ConnectionQueueResource" scope="prototype">
+        <property name="serviceFacade" ref="serviceFacade"/>
+        <property name="properties" ref="nifiProperties"/>
+        <property name="clusterManager" ref="clusterManager"/>
+    </bean>
     <bean id="connectionResource" class="org.apache.nifi.web.api.ConnectionResource" scope="prototype">
         <property name="serviceFacade" ref="serviceFacade"/>
         <property name="properties" ref="nifiProperties"/>

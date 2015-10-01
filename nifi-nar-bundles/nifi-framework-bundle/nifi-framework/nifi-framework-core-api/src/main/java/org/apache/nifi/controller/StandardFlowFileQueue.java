@@ -295,6 +295,35 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
     }
 
     @Override
+    public void clear() {
+        writeLock.lock();
+        try {
+            // an other way to create a new PriorityQueue
+            activeQueue.clear();
+            activeQueueContentSize = 0;
+
+        } finally {
+            activeQueueSizeRef.set(activeQueue.size());
+            writeLock.unlock("clearActiveQueue");
+        }
+    }
+
+    @Override
+    public boolean remove(FlowFileRecord record) {
+        writeLock.lock();
+        try {
+            boolean result = activeQueue.remove(record);
+            // could be silly, if the size of the input flow file (e.g. coming from an API call) is not correct
+            // and is not equal the size of the flow file, already living in the queue.
+            activeQueueContentSize -= record.getSize();
+            return result;
+        } finally {
+            activeQueueSizeRef.set(activeQueue.size());
+            writeLock.unlock("remove");
+        }
+    }
+
+    @Override
     public void acknowledge(final FlowFileRecord flowFile) {
         if (queueFullRef.get()) {
             writeLock.lock();
@@ -534,6 +563,20 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
             return swapQueue.size();
         } finally {
             readLock.unlock("getSwapQueueSize");
+        }
+    }
+
+    @Override
+    public List<FlowFileRecord> getItems() {
+        readLock.lock();
+        try {
+            List<FlowFileRecord> items = new ArrayList<>(activeQueue);
+            // The Iterator provided in method activeQueue.iterator() is not guaranteed to traverse the elements of the
+            // priority queue in any particular order, so we need to sort the items.
+            Collections.sort(items, new Prioritizer(priorities));
+            return items;
+        } finally {
+            readLock.unlock("getItems");
         }
     }
 

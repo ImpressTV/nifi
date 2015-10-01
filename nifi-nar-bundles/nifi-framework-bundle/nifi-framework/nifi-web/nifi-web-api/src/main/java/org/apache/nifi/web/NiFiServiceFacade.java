@@ -18,6 +18,7 @@ package org.apache.nifi.web;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import org.apache.nifi.controller.ScheduledState;
 
@@ -27,6 +28,7 @@ import org.apache.nifi.web.api.dto.BulletinBoardDTO;
 import org.apache.nifi.web.api.dto.BulletinQueryDTO;
 import org.apache.nifi.web.api.dto.ClusterDTO;
 import org.apache.nifi.web.api.dto.ConnectionDTO;
+import org.apache.nifi.web.api.dto.ConnectionQueueItemDTO;
 import org.apache.nifi.web.api.dto.ControllerConfigurationDTO;
 import org.apache.nifi.web.api.dto.ControllerDTO;
 import org.apache.nifi.web.api.dto.ControllerServiceDTO;
@@ -524,6 +526,41 @@ public interface NiFiServiceFacade {
      * @return snapshot
      */
     ConfigurationSnapshot<Void> deleteConnection(Revision revision, String groupId, String connectionId);
+
+
+    // ----------------------------------------
+    // Connections queue methods
+    // ----------------------------------------
+    /**
+     * Removes all of the items from a connection queue.
+     *
+     * @param groupId The processor group of the connection
+     * @param connectionId The ID of the connection
+     */
+    void clearConnectionQueue(String groupId, String connectionId);
+
+
+    /**
+     * Gets items from a connection queue.
+     *
+     * @param groupId The processor group of the connection
+     * @param connectionId The ID of the connection
+     * @param offset Specifies the offset, from which the items are returned (inclusive)
+     * @param limit Determines how many queue items will return at once
+     * @return List of queue items
+     */
+    List<ConnectionQueueItemDTO> getConnectionQueueItems(String groupId, String connectionId, Integer offset, Integer limit);
+
+    /**
+     * Removes an item from the connection queue if it is present.
+     *
+     * @param groupId The processor group of the connection
+     * @param connectionId The ID of the connection
+     * @param item Queue item to be removed
+     * @return true if the connection queue changed as a result of the call
+     */
+    boolean removeConnectionQueueItem(String groupId, String connectionId, ConnectionQueueItemDTO item);
+
 
     // ----------------------------------------
     // InputPort methods

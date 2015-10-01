@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.WebApplicationException;
 
+import com.google.common.base.Strings;
 import org.apache.nifi.action.Action;
 import org.apache.nifi.action.Component;
 import org.apache.nifi.action.Operation;
@@ -57,10 +58,15 @@ import org.apache.nifi.connectable.Connection;
 import org.apache.nifi.connectable.Funnel;
 import org.apache.nifi.connectable.Port;
 import org.apache.nifi.controller.Counter;
+import org.apache.nifi.controller.FlowFileQueue;
 import org.apache.nifi.controller.ProcessorNode;
 import org.apache.nifi.controller.Snippet;
 import org.apache.nifi.controller.Template;
+import org.apache.nifi.controller.ReportingTaskNode;
+import org.apache.nifi.controller.ScheduledState;
 import org.apache.nifi.controller.label.Label;
+import org.apache.nifi.controller.repository.FlowFileRecord;
+import org.apache.nifi.controller.repository.StandardFlowFileRecord;
 import org.apache.nifi.controller.repository.claim.ContentDirection;
 import org.apache.nifi.controller.status.ConnectionStatus;
 import org.apache.nifi.controller.status.PortStatus;
@@ -68,6 +74,7 @@ import org.apache.nifi.controller.status.ProcessGroupStatus;
 import org.apache.nifi.controller.status.ProcessorStatus;
 import org.apache.nifi.controller.status.RemoteProcessGroupStatus;
 import org.apache.nifi.diagnostics.SystemDiagnostics;
+import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.groups.ProcessGroupCounts;
 import org.apache.nifi.groups.RemoteProcessGroup;
@@ -79,43 +86,13 @@ import org.apache.nifi.remote.RootGroupPort;
 import org.apache.nifi.reporting.Bulletin;
 import org.apache.nifi.reporting.BulletinQuery;
 import org.apache.nifi.reporting.BulletinRepository;
+import org.apache.nifi.web.api.dto.*;
 import org.apache.nifi.web.security.user.NiFiUserUtils;
 import org.apache.nifi.user.AccountStatus;
 import org.apache.nifi.user.NiFiUser;
 import org.apache.nifi.user.NiFiUserGroup;
 import org.apache.nifi.util.FormatUtils;
 import org.apache.nifi.util.NiFiProperties;
-import org.apache.nifi.web.api.dto.BulletinBoardDTO;
-import org.apache.nifi.web.api.dto.BulletinDTO;
-import org.apache.nifi.web.api.dto.BulletinQueryDTO;
-import org.apache.nifi.web.api.dto.ClusterDTO;
-import org.apache.nifi.web.api.dto.ConnectionDTO;
-import org.apache.nifi.web.api.dto.ControllerConfigurationDTO;
-import org.apache.nifi.web.api.dto.ControllerDTO;
-import org.apache.nifi.web.api.dto.CounterDTO;
-import org.apache.nifi.web.api.dto.CountersDTO;
-import org.apache.nifi.web.api.dto.DocumentedTypeDTO;
-import org.apache.nifi.web.api.dto.DtoFactory;
-import org.apache.nifi.web.api.dto.FlowSnippetDTO;
-import org.apache.nifi.web.api.dto.FunnelDTO;
-import org.apache.nifi.web.api.dto.LabelDTO;
-import org.apache.nifi.web.api.dto.NodeDTO;
-import org.apache.nifi.web.api.dto.NodeSystemDiagnosticsDTO;
-import org.apache.nifi.web.api.dto.PortDTO;
-import org.apache.nifi.web.api.dto.PreviousValueDTO;
-import org.apache.nifi.web.api.dto.ProcessGroupDTO;
-import org.apache.nifi.web.api.dto.ProcessorConfigDTO;
-import org.apache.nifi.web.api.dto.ProcessorDTO;
-import org.apache.nifi.web.api.dto.ComponentHistoryDTO;
-import org.apache.nifi.web.api.dto.PropertyHistoryDTO;
-import org.apache.nifi.web.api.dto.RemoteProcessGroupDTO;
-import org.apache.nifi.web.api.dto.RemoteProcessGroupPortDTO;
-import org.apache.nifi.web.api.dto.RevisionDTO;
-import org.apache.nifi.web.api.dto.SnippetDTO;
-import org.apache.nifi.web.api.dto.SystemDiagnosticsDTO;
-import org.apache.nifi.web.api.dto.TemplateDTO;
-import org.apache.nifi.web.api.dto.UserDTO;
-import org.apache.nifi.web.api.dto.UserGroupDTO;
 import org.apache.nifi.web.api.dto.action.ActionDTO;
 import org.apache.nifi.web.api.dto.action.HistoryDTO;
 import org.apache.nifi.web.api.dto.action.HistoryQueryDTO;
@@ -154,16 +131,10 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
-import org.apache.nifi.controller.ReportingTaskNode;
-import org.apache.nifi.controller.ScheduledState;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceReference;
 import org.apache.nifi.controller.service.ControllerServiceState;
 import org.apache.nifi.reporting.ComponentType;
-import org.apache.nifi.web.api.dto.ControllerServiceDTO;
-import org.apache.nifi.web.api.dto.ControllerServiceReferencingComponentDTO;
-import org.apache.nifi.web.api.dto.PropertyDescriptorDTO;
-import org.apache.nifi.web.api.dto.ReportingTaskDTO;
 import org.apache.nifi.web.api.dto.status.ClusterProcessGroupStatusDTO;
 import org.apache.nifi.web.api.dto.status.NodeProcessGroupStatusDTO;
 import org.apache.nifi.web.dao.ControllerServiceDAO;
@@ -806,6 +777,29 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
                 };
             }
         });
+    }
+
+    @Override
+    public boolean removeConnectionQueueItem(String groupId, String connectionId, ConnectionQueueItemDTO item) {
+        // get the connection
+        Connection connection = connectionDAO.getConnection(groupId, connectionId);
+        FlowFileQueue flowFileQueue = connection.getFlowFileQueue();
+
+        // Create a new flow file from the DTO object for the queue remove operation the `size` and `id` fields are required.
+        // `id` is used to locate the item to be removed, while `size` is used to update queue statistics.
+        final FlowFileRecord flowFileRecord = new StandardFlowFileRecord.Builder()
+                .id(item.getFlowFileId())
+                .size(item.getFileSizeBytes())
+                .addAttribute(CoreAttributes.UUID.key(), item.getFlowFileUuid())
+                .build();
+        return flowFileQueue.remove(flowFileRecord);
+    }
+
+    @Override
+    public void clearConnectionQueue(final String groupId, final String connectionId) {
+        Connection conn = connectionDAO.getConnection(groupId, connectionId);
+        FlowFileQueue flowFileQueue = conn.getFlowFileQueue();
+        flowFileQueue.clear();
     }
 
     @Override
@@ -2089,6 +2083,37 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     @Override
     public ConnectionDTO getConnection(String groupId, String connectionId) {
         return dtoFactory.createConnectionDto(connectionDAO.getConnection(groupId, connectionId));
+    }
+
+    @Override
+    public List<ConnectionQueueItemDTO> getConnectionQueueItems(String groupId, String connectionId, Integer offset, Integer limit) {
+        List<ConnectionQueueItemDTO> queueItemsDto = new ArrayList<>();
+
+        // get the connection
+        Connection connection = connectionDAO.getConnection(groupId, connectionId);
+        FlowFileQueue flowFileQueue = connection.getFlowFileQueue();
+
+        // get all queue items
+        List<FlowFileRecord> queueItems = flowFileQueue.getItems();
+
+        int offsetValue = offset == null ? 0 : offset;
+        int limitValue = limit == null ? queueItems.size() : limit;
+
+        for (FlowFileRecord record : queueItems.subList(offsetValue, offsetValue + limitValue)) {
+            // get the priority of the flow file from the priority attribute
+            Integer priority = null;
+            String priorityAttributeValue = record.getAttribute(CoreAttributes.PRIORITY.key());
+            if (!Strings.isNullOrEmpty(priorityAttributeValue)) {
+                try {
+                    priority = Integer.valueOf(priorityAttributeValue);
+                } catch (NumberFormatException ignore) {
+                    // swallow exception, priority is not a valid int
+                }
+            }
+            queueItemsDto.add(dtoFactory.createConnectionQueueItemDto(record, priority));
+        }
+
+        return queueItemsDto;
     }
 
     @Override
